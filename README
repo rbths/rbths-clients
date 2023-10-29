@@ -1,0 +1,15 @@
+# Build
+
+First build and install grpc locally by https://grpc.io/docs/languages/cpp/quickstart/
+
+install related packages:
+
+sudo apt install libsystemd-dev
+
+cross build:
+
+sudo apt-get install qemu binfmt-support qemu-user-static
+docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+
+docker build --platform linux/arm64 --target build -t t1 -f dockers/log_indexer.Dockerfile .
+docker cp $(docker create t1):/app/build/exec/log_indexer/logindexer_server .

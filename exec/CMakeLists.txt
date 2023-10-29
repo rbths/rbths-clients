@@ -1,0 +1,3 @@
+add_subdirectory(log_indexer)
+add_subdirectory(log_cli)
+add_subdirectory(log_local_cli)

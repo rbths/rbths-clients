@@ -1,0 +1,5 @@
+add_library(log_grabber INTERFACE)
+target_include_directories(log_grabber INTERFACE include)
+add_subdirectory(log_grabbers)
+add_subdirectory(plugin_loader)
+add_subdirectory(plugins)
