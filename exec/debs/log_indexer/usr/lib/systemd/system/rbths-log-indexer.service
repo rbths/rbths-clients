@@ -1,0 +1,9 @@
+[Unit]
+Description=Rbths Log Indexer Server
+[Service]
+Type=simple
+ExecStart=/opt/rbths/bin/logindexer_server
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

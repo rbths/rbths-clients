@@ -9,4 +9,5 @@ target_link_libraries(journald_iterator
     PRIVATE
     systemd
     utils
+    Boost::dll
 )

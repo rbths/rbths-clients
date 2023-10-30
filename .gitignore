@@ -3,3 +3,4 @@ debug/
 target/
 build/
 build-arm/
+build-amd64/

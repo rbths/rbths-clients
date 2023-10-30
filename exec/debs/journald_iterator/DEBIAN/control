@@ -1,0 +1,8 @@
+Package: rbths-journald-iterator
+Version: 0.0.1
+Architecture: {ARCH}
+Depends: libsystemd0,rbths-log-indexer
+Description: journald iterator for rbths
+Maintainer: rbths
+
+

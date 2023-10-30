@@ -41,8 +41,7 @@ LogIteratorGenerator rbths::log_grabber::plugin_loader::getLogIteratorGenerator(
     const std::string& path) {
   try {
     for (auto& p : boost::filesystem::directory_iterator(path)) {
-      if (p.path().filename().extension() == "so") {
-        std::cout << p.path() << std::endl;
+      if (p.path().filename().extension() == ".so") {
         auto ret = try_load_iterator(p.path().string(), name);
         if (ret != nullptr) {
           return ret;
