@@ -144,9 +144,11 @@ class LogIndexerServiceImpl final : public LogIndexer::Service {
         to_Timestamp(returned_range.start));
     reply->mutable_returned_range()->mutable_end()->CopyFrom(
         to_Timestamp(returned_range.end));
-    reply->mutable_time_distribution()->Reserve(distribution.size());
+    auto* ts = reply->add_time_series();
+    ts->set_name("::all");
+    ts->mutable_time_distribution()->Reserve(distribution.size());
     for (auto& dist : distribution) {
-      auto* dist_entry = reply->add_time_distribution();
+      auto* dist_entry = ts->add_time_distribution();
       dist_entry->set_sec(dist.first);
       dist_entry->set_count(dist.second);
     }

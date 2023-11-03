@@ -31,13 +31,17 @@ message FieldRange {
     int64 max = 2;
 }
 
+message TimeSeries {
+    string name = 1;
+    repeated TimeDistribution time_distribution = 2;
+}
 message LogSearchResult {
     repeated LogEntry log = 1;
     LogRange searched_range = 2;
     LogRange returned_range = 3;
     string search_id = 4;
-    int32 total_counts = 5;  
-    repeated TimeDistribution time_distribution = 6;
+    int32 total_counts = 5;
+    repeated TimeSeries time_series = 6;
 }
 
 message DistinctValueCount {
