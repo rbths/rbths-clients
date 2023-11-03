@@ -64,8 +64,8 @@ struct LogGrabberI {
     virtual ~LogGrabberI() = default;  ///< As polymorphic base class it has to
                                        ///< have virtual destructor.
     virtual LogRange getAllLogRange() = 0;///< Get the range of the log.
-    virtual void searchLog(const LogSearchInput& input, LogRange& searched_range, LogRange& returned_range, std::vector<LogEntry> &results) = 0;
-    virtual void searchAndGroup(const LogSearchInput& input, LogRange& searched_range, LogRange& returned_range, std::vector<LogEntry> &results, std::unordered_map<std::string, std::unordered_map<std::string, int>> &groups, std::unordered_map<std::string, std::pair<int64_t, int64_t>> &ranges, std::unordered_set<std::string> &keys) = 0;
+    virtual void searchLog(const LogSearchInput& input, LogRange& searched_range, LogRange& returned_range, std::vector<LogEntry> &results, std::vector<std::pair<int32_t, int32_t>> &distribution) = 0;
+    virtual void searchAndGroup(const LogSearchInput& input, LogRange& searched_range, LogRange& returned_range, std::vector<LogEntry> &results, std::unordered_map<std::string, std::unordered_map<std::string, int>> &groups, std::unordered_map<std::string, std::pair<int64_t, int64_t>> &ranges, std::unordered_set<std::string> &keys, std::vector<std::pair<int32_t, int32_t>> &distribution) = 0;
 };
 
 class LogIteratorI {

@@ -104,6 +104,10 @@ int main(int argc, char** argv) {
     }
     std::cout << std::endl;
   }
+
+  for(auto& dis : rst.search_result().time_distribution()) {
+    std::cout << dis.sec() << " -> " << dis.count() << std::endl;
+  }
   
   
 

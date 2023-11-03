@@ -37,6 +37,7 @@ message LogSearchResult {
     LogRange returned_range = 3;
     string search_id = 4;
     int32 total_counts = 5;  
+    repeated TimeDistribution time_distribution = 6;
 }
 
 message DistinctValueCount {
@@ -48,6 +49,10 @@ enum SubOps {
     AND = 0;
     OR = 1;
     NOT = 2;
+}
+message TimeDistribution {
+    int32 sec = 1;
+    int32 count = 2;
 }
 
 message FieldStatement {
