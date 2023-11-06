@@ -33,6 +33,7 @@ SearchQuery query1() {
   auto* fs = query.mutable_conditions()->mutable_field_statement();
   fs->set_key("service");
   fs->mutable_values_in()->Add("sshd");
+  query.set_return_offset(0);
   return query;
 }
 

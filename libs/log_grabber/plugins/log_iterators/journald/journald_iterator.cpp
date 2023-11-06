@@ -21,7 +21,7 @@ LogEntryField sd_journal_get_data_parsed(sd_journal *j, const char *field) {
     size_t size;
     int ret = sd_journal_get_data(j, field, &data, &size);
     if (ret != 0) {
-        std::cout << "sd_journal_get_data error " << ret << std::endl;
+        // std::cout << "sd_journal_get_data error " << ret << std::endl;
         return {};
     }
     return parseDataField((const char*)data, size);

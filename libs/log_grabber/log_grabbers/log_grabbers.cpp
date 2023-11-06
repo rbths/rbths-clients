@@ -262,9 +262,11 @@ void IteratorGrabber::searchAndGroup(
     std::unordered_set<std::string>& keys,
     std::vector<std::pair<int32_t, int32_t>>& distribution) {
   uint64_t t0 = getTime_us();
-  int64_t return_limit = input.return_limit;
+  uint64_t return_limit = input.return_limit;
+  uint64_t offset = input.offset;
   auto iterator = iterator_generator(input);
   std::map<int32_t, int32_t> dist;
+  uint64_t id = 0;
   while (auto entry_p = iterator->next()) {
     bool no_more = (getTime_us() - t0) > input.timeout_ms * 1000;
     if (no_more) {
@@ -283,14 +285,20 @@ void IteratorGrabber::searchAndGroup(
     update_key_value_range_str("unit", entry.unit, groups, keys, 10000);
     update_key_value_range_int("timestamp", entry.timestamp, groups, ranges);
     update_key_value_range_int("msg_len", entry.msg.length(), groups, ranges);
+    entry.id = id;
+    id++;
     for (auto& field : entry.additional_fields) {
       update_key_value_range_str(field.key, field.value, groups, keys);
     }
-    if (return_limit > 0) {
-      results.push_back(std::move(entry));
-    }
     dist[entry.timestamp / 1000000] += 1;
-    return_limit--;
+
+    if (return_limit > 0 && offset == 0) {
+      results.push_back(std::move(entry));
+      return_limit--;
+    }
+    if (offset > 0) {
+      offset--;
+    }
     if (no_more) {
       break;
     }

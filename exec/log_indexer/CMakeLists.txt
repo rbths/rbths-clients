@@ -3,7 +3,11 @@ find_package(Threads)
 include(FindProtobuf)
 find_package(Protobuf CONFIG REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
-add_executable(logindexer_server main.cpp)
+add_executable(logindexer_server main.cpp service_impl.cpp)
+target_include_directories(logindexer_server
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
 target_link_libraries(logindexer_server
     PRIVATE
     logindexer_proto

@@ -28,6 +28,7 @@ struct LogEntry {
     std::string hostname;
     std::string unit;
     std::vector<LogEntryField> additional_fields;
+    int id;
 };
 enum SubOps {
     AND,
@@ -57,6 +58,7 @@ struct LogSearchInput{
     uint64_t return_limit;
     std::optional<ConditionStatement> conditions;
     int32_t timeout_ms;
+    uint64_t offset;
 };
 
 #define LOG_GRABBER_TOTAL_COUNT_KEY "_RBT_TOTAL_"

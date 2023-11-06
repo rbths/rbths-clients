@@ -39,19 +39,6 @@ LogIteratorGenerator try_load_iterator(const std::string& path_so,
 LogIteratorGenerator rbths::log_grabber::plugin_loader::getLogIteratorGenerator(
     const std::string& name,
     const std::string& path) {
-  try {
-    for (auto& p : boost::filesystem::directory_iterator(path)) {
-      if (p.path().filename().extension() == ".so") {
-        auto ret = try_load_iterator(p.path().string(), name);
-        if (ret != nullptr) {
-          return ret;
-        }
-      }
-    }
-  } catch (const std::exception& e) {
-    std::cout << "Error loading " << path << ": " << e.what() << std::endl;
-  }
-
 #ifndef RBTHS_RELEASE_BUILD
   try {
     for (auto& p : boost::filesystem::directory_iterator(
@@ -72,5 +59,19 @@ LogIteratorGenerator rbths::log_grabber::plugin_loader::getLogIteratorGenerator(
   }
 
 #endif
+  try {
+    for (auto& p : boost::filesystem::directory_iterator(path)) {
+      if (p.path().filename().extension() == ".so") {
+        auto ret = try_load_iterator(p.path().string(), name);
+        if (ret != nullptr) {
+          return ret;
+        }
+      }
+    }
+  } catch (const std::exception& e) {
+    std::cout << "Error loading " << path << ": " << e.what() << std::endl;
+  }
+
+
   return nullptr;
 }

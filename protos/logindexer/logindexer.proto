@@ -86,6 +86,8 @@ message SearchQuery {
     string hostname_regex = 6;
     ConditionStatement conditions = 7;
     int32 timeout_ms = 8;
+    string search_id = 9;
+    int32 return_offset = 10;
 }
 
 message FieldInfo {
