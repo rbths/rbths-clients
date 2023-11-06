@@ -168,15 +168,25 @@ void IteratorGrabber::searchLog(
     std::vector<std::pair<int32_t, int32_t>>& distribution) {
   uint64_t t0 = getTime_us();
   int64_t return_limit = input.return_limit;
+  int64_t offset = input.offset;
   auto iterator = iterator_generator(input);
   while (auto entry = iterator->next()) {
+    bool no_more = (getTime_us() - t0) > input.timeout_ms * 1000;
     if (input.conditions.has_value() &&
         !check_condition(input.conditions.value(), entry.value())) {
+      if (no_more) {
+        break;
+      }
       continue;
     }
-    results.push_back(std::move(entry.value()));
-    return_limit--;
-    if (return_limit <= 0) {
+    if (return_limit > 0 && offset == 0) {
+      results.push_back(std::move(entry.value()));
+      return_limit--;
+    }
+    if (offset > 0) {
+      offset--;
+    }
+    if (return_limit <= 0 || no_more) {
       break;
     }
   }
