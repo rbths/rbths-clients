@@ -2,8 +2,13 @@
 
 #include <iostream>
 #include <memory>
+#include <fstream>
+#include <filesystem>
+#include <thread>
 #include <string>
 #include "utils.h"
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 uint64_t from_Timestamp(const logindexer::Timestamp& ts) {
   return uint64_t(ts.sec()) * 1000000 + ts.us();
@@ -82,26 +87,49 @@ void populateInput(const SearchQuery* request,
   input.timeout_ms = request->timeout_ms() == 0 ? 5000 : request->timeout_ms();
 }
 
+void populateLogEntry(logindexer::LogEntry* log_entry,
+                      const rbths::log_grabber::LogEntry& entry) {
+  log_entry->mutable_timestamp()->set_sec(entry.timestamp / 1000000);
+  log_entry->mutable_timestamp()->set_us(entry.timestamp % 1000000);
+  log_entry->set_id(entry.id);
+  log_entry->set_msg(entry.msg);
+  log_entry->set_service_name(entry.service);
+  log_entry->set_hostname(entry.hostname);
+  log_entry->set_unit(entry.unit);
+  for (auto& field : entry.additional_fields) {
+    auto* log_field = log_entry->add_additional_fields();
+    log_field->set_key(field.key);
+    log_field->set_value(field.value);
+  }
+}
+
+void compress_and_save(const std::string& search_id,
+                       const std::vector<rbths::log_grabber::LogEntry>& data) {
+  std::ofstream out("/tmp/rbths_indexer/searches/" + search_id + ".proto",
+                    std::ios_base::out | std::ios_base::binary);
+  std::ofstream index_out("/tmp/rbths_indexer/searches/" + search_id + ".idx",
+                          std::ios_base::out | std::ios_base::binary);
+  uint64_t offset0 = out.tellp();
+  for (auto& entry : data) {
+    logindexer::LogEntry proto_entry;
+    populateLogEntry(&proto_entry, entry);
+    uint64_t offset = out.tellp() - offset0;
+    index_out.write((const char*)&offset, sizeof(uint64_t));
+    proto_entry.SerializeToOstream(&out);
+  }
+}
+
 void populateSearchOutput(
     const rbths::log_grabber::LogRange& searched_range,
     const rbths::log_grabber::LogRange& returned_range,
-    const std::vector<rbths::log_grabber::LogEntry>& results,
+    std::vector<rbths::log_grabber::LogEntry>::iterator begin,
+    std::vector<rbths::log_grabber::LogEntry>::iterator end,
     const std::vector<std::pair<int32_t, int32_t>>& distribution,
     LogSearchResult* reply) {
-  for (auto& entry : results) {
-    auto* log_entry = reply->add_log();
-    log_entry->mutable_timestamp()->set_sec(entry.timestamp / 1000000);
-    log_entry->mutable_timestamp()->set_us(entry.timestamp % 1000000);
-    log_entry->set_id(entry.id);
-    log_entry->set_msg(entry.msg);
-    log_entry->set_service_name(entry.service);
-    log_entry->set_hostname(entry.hostname);
-    log_entry->set_unit(entry.unit);
-    for (auto& field : entry.additional_fields) {
-      auto* log_field = log_entry->add_additional_fields();
-      log_field->set_key(field.key);
-      log_field->set_value(field.value);
-    }
+  uint64_t t0 = getTime_us();
+  for (auto itr = begin; itr != end; itr++) {
+    auto* log = reply->add_log();
+    populateLogEntry(log, *itr);
   }
   reply->mutable_searched_range()->mutable_start()->CopyFrom(
       to_Timestamp(searched_range.start));
@@ -119,6 +147,7 @@ void populateSearchOutput(
     dist_entry->set_sec(dist.first);
     dist_entry->set_count(dist.second);
   }
+  std::cout << "Populate output time: " << getTime_us() - t0 << " total" << reply->log_size() <<std::endl;
 }
 
 int populateGroups(
@@ -155,7 +184,94 @@ int populateGroups(
   }
   return total_msg;
 }
+bool LogIndexerServiceImpl::loadSearchResult(
+  const SearchQuery* request,
+  logindexer::LogSearchResult* reply
+) {
+  index_index_lock.lock_shared();
+  if (log_index_lock.find(request->search_id()) == log_index_lock.end()) {
+    index_index_lock.unlock_shared();
+    return false;
+  }
+  std::shared_lock<std::shared_mutex> guard(log_index_lock.find(request->search_id())->second);
+  index_index_lock.unlock_shared();
+  
+  std::cout << "Got request for loadSearchResult with search_id " << request->search_id() << std::endl;
+  std::ifstream in(
+      "/tmp/rbths_indexer/searches/" + request->search_id() + ".proto",
+      std::ios_base::in | std::ios_base::binary);
+  std::ifstream index_in(
+      "/tmp/rbths_indexer/searches/" + request->search_id() + ".idx",
+      std::ios_base::in | std::ios_base::binary);
+  if (!in.is_open() || !index_in.is_open()) {
+    std::cout << "Error opening file" << std::endl;
+    return false;
+  }
+  int return_offset = request->return_offset();
+  int limit = request->return_limit();
 
+  index_in.seekg(return_offset * sizeof(uint64_t));
+  std::string buffer;
+  buffer.resize(1024 * 1024 * 5);
+  uint64_t offset, next_offset = 1;
+  index_in.read((char*)&offset, sizeof(uint64_t));
+  while (limit > 0) {
+    index_in.read((char*)&next_offset, sizeof(uint64_t));
+    in.seekg(offset);
+    bool index_reach_end = false;
+    if (index_in.bad()) {
+      index_reach_end = true;
+    }
+    in.read(buffer.data(),
+            index_reach_end ? buffer.size() : next_offset - offset);
+    if (in.gcount() == 0 && in.eof()) {
+      std::cerr << "Error reading buffer file: " << offset << std::endl;
+      return false;
+    }
+    logindexer::LogEntry entry;
+    entry.ParseFromArray(buffer.data(), in.gcount());
+    auto* log = reply->add_log();
+    log->CopyFrom(entry);
+    limit--;
+    if (index_reach_end) {
+      break;
+    }
+    offset = next_offset;
+  }
+  return true;
+}
+LogIndexerServiceImpl::~LogIndexerServiceImpl() {
+  cleanUp(0);
+}
+void LogIndexerServiceImpl::cleanUp(u_int32_t timeout) {
+  uint32_t now = getTime_us() / 1000000;
+  for(auto itr = log_index_created_at.begin(); itr != log_index_created_at.end();) {
+    if (now - itr->second > timeout || timeout == 0) {
+      std::unique_lock<std::shared_mutex> guard(index_index_lock);
+      {
+        std::unique_lock<std::shared_mutex> guard(log_index_lock[itr->first]);
+        std::cout << "Deleting index " << itr->first << std::endl;
+        std::remove(("/tmp/rbths_indexer/searches/" + itr->first + ".proto").c_str());
+        std::remove(("/tmp/rbths_indexer/searches/" + itr->first + ".idx").c_str());
+      }
+      log_index_lock.erase(itr->first);
+      itr = log_index_created_at.erase(itr);
+    } else {
+      itr ++;
+    }
+  }
+}
+
+void LogIndexerServiceImpl::schedule_cleanup() {
+  std::filesystem::remove_all("/tmp/rbths_indexer/searches");
+  std::filesystem::create_directory("/tmp/rbths_indexer/searches");
+  std::thread([this]() {
+    while (true) {
+      std::this_thread::sleep_for(std::chrono::seconds(60));
+      cleanUp(60 * 60);
+    }
+  }).detach();
+}
 Status LogIndexerServiceImpl::searchAndGroup(
     ServerContext* context,
     const SearchQuery* request,
@@ -163,6 +279,9 @@ Status LogIndexerServiceImpl::searchAndGroup(
   std::cout << "Got request for searchAndGroup " << std::endl;
   context->set_compression_level(GRPC_COMPRESS_LEVEL_LOW);
   rbths::log_grabber::LogSearchInput input;
+  if (request->search_id() != "") {
+    std::cout << "Search Id ignored: " << request->search_id() << std::endl;
+  }
   populateInput(request, input);
   std::cout << "Input timeout " << input.timeout_ms << std::endl;
   rbths::log_grabber::LogRange searched_range;
@@ -172,20 +291,39 @@ Status LogIndexerServiceImpl::searchAndGroup(
   std::unordered_map<std::string, std::pair<int64_t, int64_t>> ranges;
   std::unordered_set<std::string> keys;
   std::vector<std::pair<int32_t, int32_t>> distribution;
+  input.return_limit = 1000000;
   grabber.searchAndGroup(input, searched_range, returned_range, results, groups,
                          ranges, keys, distribution);
-  populateSearchOutput(searched_range, returned_range, results, distribution,
+  std::cout << "Got results " << results.size() << std::endl;
+  auto itr = results.begin() + request->return_offset();
+  auto itr_end = itr + request->return_limit();
+  populateSearchOutput(searched_range, returned_range, itr, itr_end, distribution,
                        reply->mutable_search_result());
+  
+  reply->mutable_search_result()->set_search_id(boost::uuids::to_string(boost::uuids::random_generator()()));
+  compress_and_save(reply->search_result().search_id(), results);
+  {
+    std::unique_lock<std::shared_mutex> guard(index_index_lock);
+    log_index_created_at[reply->search_result().search_id()] = getTime_us() / 1000000;
+    log_index_lock[reply->search_result().search_id()];
+  }
+  
   int total = populateGroups(groups, ranges, keys, reply);
   reply->set_total_count(total);
+
   return Status::OK;
 }
 
 Status LogIndexerServiceImpl::searchLogs(ServerContext* context,
                                          const SearchQuery* request,
                                          LogSearchResult* reply) {
-  std::cout << "Got request for search " << std::endl;
   context->set_compression_level(GRPC_COMPRESS_LEVEL_LOW);
+  if (request->search_id() != "") {
+    if (loadSearchResult(request, reply)) {
+      return Status::OK;
+    }
+  }
+  std::cout << "Got request for search " << std::endl;
   rbths::log_grabber::LogSearchInput input;
   populateInput(request, input);
 
@@ -196,7 +334,7 @@ Status LogIndexerServiceImpl::searchLogs(ServerContext* context,
   grabber.searchLog(input, searched_range, returned_range, results,
                     distribution);
 
-  populateSearchOutput(searched_range, returned_range, results, distribution,
+  populateSearchOutput(searched_range, returned_range, results.begin(), results.end(), distribution,
                        reply);
   return Status::OK;
 }

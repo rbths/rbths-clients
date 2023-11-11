@@ -1,5 +1,5 @@
 Package: rbths-log-indexer
-Version: 0.1.1
+Version: 0.1.2
 Architecture: {ARCH}
 Description: log indexer for rbths
 Maintainer: rbths
