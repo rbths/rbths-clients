@@ -20,4 +20,6 @@ target_link_libraries(logindexer_server
     log_grabbers
     plugin_loader
     utils
+    stdc++fs
+    Boost::uuid
 )

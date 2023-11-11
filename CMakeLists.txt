@@ -15,7 +15,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g")
 # set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 
-set(BOOST_INCLUDE_LIBRARIES thread filesystem system program_options dll)
+set(BOOST_INCLUDE_LIBRARIES thread filesystem system program_options dll uuid)
 set(BOOST_ENABLE_CMAKE ON)
 
 include(FetchContent)

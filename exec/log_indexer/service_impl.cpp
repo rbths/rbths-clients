@@ -3,7 +3,7 @@
 #include <iostream>
 #include <memory>
 #include <fstream>
-#include <filesystem>
+#include <experimental/filesystem>
 #include <thread>
 #include <string>
 #include "utils.h"
@@ -263,8 +263,8 @@ void LogIndexerServiceImpl::cleanUp(u_int32_t timeout) {
 }
 
 void LogIndexerServiceImpl::schedule_cleanup() {
-  std::filesystem::remove_all("/tmp/rbths_indexer/searches");
-  std::filesystem::create_directory("/tmp/rbths_indexer/searches");
+  std::experimental::filesystem::v1::remove_all("/tmp/rbths_indexer/searches");
+  std::experimental::filesystem::v1::create_directory("/tmp/rbths_indexer/searches");
   std::thread([this]() {
     while (true) {
       std::this_thread::sleep_for(std::chrono::seconds(60));
