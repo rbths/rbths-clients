@@ -195,6 +195,7 @@ bool LogIndexerServiceImpl::loadSearchResult(
   }
   std::shared_lock<std::shared_mutex> guard(log_index_lock.find(request->search_id())->second);
   index_index_lock.unlock_shared();
+  log_index_created_at[request->search_id()] = getTime_us() / 1000000;
   
   std::cout << "Got request for loadSearchResult with search_id " << request->search_id() << std::endl;
   std::ifstream in(
