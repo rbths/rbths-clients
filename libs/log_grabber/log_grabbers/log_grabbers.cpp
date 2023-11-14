@@ -192,7 +192,9 @@ void IteratorGrabber::searchLog(
   }
   uint64_t t1 = getTime_us();
   searched_range = iterator->getSearchedRange();
-  returned_range = {results.front().timestamp, results.back().timestamp};
+  if (!results.empty()) {
+    returned_range = {results.front().timestamp, results.back().timestamp};
+  }
   std::cout << "Search took " << (t1 - t0) << " us" << std::endl;
 }
 inline void update_key_value_range_int(
