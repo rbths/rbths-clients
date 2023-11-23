@@ -20,7 +20,7 @@ using grpc::Status;
 
 
 
-ABSL_FLAG(uint16_t, port, 50051, "Server port for the service");
+ABSL_FLAG(uint16_t, port, 45562, "Server port for the service");
 ABSL_FLAG(bool,
           secure,
           true,
