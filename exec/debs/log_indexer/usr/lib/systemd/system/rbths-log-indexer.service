@@ -4,6 +4,6 @@ Description=Rbths Log Indexer Server
 Type=simple
 ExecStart=/opt/rbths/bin/logindexer_server
 Restart=always
-
+EnvironmentFile=/etc/default/logindexer_server
 [Install]
 WantedBy=multi-user.target
