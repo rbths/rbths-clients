@@ -264,14 +264,8 @@ void LogIndexerServiceImpl::cleanUp(u_int32_t timeout) {
 }
 
 void LogIndexerServiceImpl::schedule_cleanup() {
-  try{
-    std::experimental::filesystem::v1::remove_all("/tmp/rbths_indexer/searches");
-  }
-  catch (std::exception& e) {
-    std::cout << "Error removing directory: " << e.what() << std::endl;
-  }
-  
-  std::experimental::filesystem::v1::create_directory("/tmp/rbths_indexer/searches");
+  std::experimental::filesystem::v1::remove_all("/tmp/rbths_indexer/searches");
+  std::experimental::filesystem::v1::create_directories("/tmp/rbths_indexer/searches");
   std::thread([this]() {
     while (true) {
       std::this_thread::sleep_for(std::chrono::seconds(60));
