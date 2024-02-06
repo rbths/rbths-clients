@@ -97,7 +97,7 @@ void RunServer(uint16_t port) {
 }
 
 int main(int argc, char** argv) {
-  int port = getEnvInt("RBTHS_SERVER_PORT", 50051);
+  int port = getEnvInt("RBTHS_SERVER_PORT", 45562);
   RunServer(port);
   return 0;
 }
