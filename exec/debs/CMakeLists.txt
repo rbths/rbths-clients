@@ -30,4 +30,14 @@ add_custom_target(log_indexer_deb
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 
-add_custom_target(all_debs DEPENDS log_indexer_deb journald_iterator_deb)
+add_custom_target(log_indexer_insecure_conf_deb
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/rm_mkdir.sh ${DEB_TMP_DIR}
+    COMMAND mkdir -p ${DEB_TMP_DIR}
+    COMMAND cp -r ${CMAKE_CURRENT_SOURCE_DIR}/log_indexer_insecure_conf/* ${DEB_TMP_DIR}/
+    COMMAND cat ${CMAKE_CURRENT_SOURCE_DIR}/log_indexer_insecure_conf/DEBIAN/control | sed 's/{ARCH}/${DEB_ARCH}/g' >  ${DEB_TMP_DIR}/DEBIAN/control
+    COMMAND dpkg-deb --build ${DEB_TMP_DIR}
+    COMMAND mv ${DEB_TMP_DIR}.deb log_indexer_insecure_conf.deb
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
+add_custom_target(all_debs DEPENDS log_indexer_deb journald_iterator_deb log_indexer_insecure_conf_deb)

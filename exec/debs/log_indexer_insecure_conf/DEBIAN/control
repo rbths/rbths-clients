@@ -1,0 +1,7 @@
+Package: rbths-log-indexer-insecure-conf
+Version: 0.0.1
+Architecture: {ARCH}
+Description: default insecure conf for log indexer for rbths. only if you know what you are doing.
+Maintainer: rbths
+
+
