@@ -1,13 +1,20 @@
 #include "log_grabbers.h"
 #include <iostream>
-#include <regex>
+#include <boost/regex.hpp>
 #include "utils.h"
-
+#define NO_TRACING
+#include "Profiler.h"
 namespace rbths {
 namespace log_grabber {
 
+bool regex_match(const std::string& str, const std::string& regex) {
+  boost::regex e(regex);
+  return boost::regex_match(str, e);
+}
+
 bool check_condition(const ConditionStatement& condition,
                      const LogEntry& entry) {
+  TRACE_TAG;
   if (condition.sub_condition.has_value()) {
     const auto& sub_condition = condition.sub_condition.value();
     switch (sub_condition.sub_op) {
@@ -84,40 +91,27 @@ bool check_condition(const ConditionStatement& condition,
       return false;
     }
     if (field_statement.values_regex.has_value()) {
+      TRACE_TAG_S("regex");
       auto& regex = field_statement.values_regex.value();
       if (regex == "") {
         return false;
       }
       if (field_statement.key == "msg") {
-        std::match_results<std::string::const_iterator> match;
-        std::regex regex(field_statement.values_regex.value());
-        std::regex_search(entry.msg, match, regex);
-        return !match.empty();
+        TRACE_TAG_S("regex_msg");
+        return regex_match(entry.msg, field_statement.values_regex.value());
       }
       if (field_statement.key == "service") {
-        std::match_results<std::string::const_iterator> match;
-        std::regex regex(field_statement.values_regex.value());
-        std::regex_search(entry.service, match, regex);
-        return !match.empty();
+        return regex_match(entry.service, field_statement.values_regex.value());
       }
       if (field_statement.key == "hostname") {
-        std::match_results<std::string::const_iterator> match;
-        std::regex regex(field_statement.values_regex.value());
-        std::regex_search(entry.hostname, match, regex);
-        return !match.empty();
+        return regex_match(entry.hostname, field_statement.values_regex.value());
       }
       if (field_statement.key == "unit") {
-        std::match_results<std::string::const_iterator> match;
-        std::regex regex(field_statement.values_regex.value());
-        std::regex_search(entry.unit, match, regex);
-        return !match.empty();
+        return regex_match(entry.unit, field_statement.values_regex.value());
       }
       for (auto& field : entry.additional_fields) {
         if (field.key == field_statement.key) {
-          std::match_results<std::string::const_iterator> match;
-          std::regex regex(field_statement.values_regex.value());
-          std::regex_search(field.value, match, regex);
-          return !match.empty();
+          return regex_match(field.value, field_statement.values_regex.value());
         }
       }
       return false;
@@ -170,7 +164,14 @@ void IteratorGrabber::searchLog(
   int64_t return_limit = input.return_limit;
   int64_t offset = input.offset;
   auto iterator = iterator_generator(input);
+  int64_t total = 0;
+#ifndef NO_TRACING  
+  enabledDefaultWriteout("log_grabber.json");
+  triggerProfiler(true);
+#endif
   while (auto entry = iterator->next()) {
+    TRACE_TAG_S("log_filter");
+    total++;
     bool no_more = (getTime_us() - t0) > input.timeout_ms * 1000;
     if (input.conditions.has_value() &&
         !check_condition(input.conditions.value(), entry.value())) {
@@ -195,7 +196,10 @@ void IteratorGrabber::searchLog(
   if (!results.empty()) {
     returned_range = {results.front().timestamp, results.back().timestamp};
   }
-  std::cout << "Search took " << (t1 - t0) << " us" << std::endl;
+  std::cout << "Search took " << (t1 - t0) << " us, filtered through " << total << std::endl;
+#ifndef NO_TRACING
+  ProfilerWriteOut("log_grabber.json");
+#endif
 }
 inline void update_key_value_range_int(
     const std::string& key,

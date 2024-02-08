@@ -42,6 +42,7 @@ int main(int argc, char** argv) {
 
 
   input.conditions.emplace(condition);
+  input.timeout_ms = 5000;
 
   // input.msg_regex = "\\d+\\.\\d+\\.\\d+\\.\\d+";
   LogRange searched_range;
